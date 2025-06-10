@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>에임 게임</title>
+  <style>
+    /* 전체 페이지 스타일 설정 */
+    body {
+      font-family: 'Arial', sans-serif; /* 글꼴 지정 */
+      text-align: center; /* 텍스트 중앙 정렬 */
+      background-color: #1e1e2f; /* 어두운 배경색 */
+      color: white; /* 글자 색상을 흰색으로 설정 */
+      margin: 0; /* 기본 여백 제거 */
+      padding: 0; /* 기본 패딩 제거 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+        margin-bottom: 20px;
+    }
+
+    /* 게임 영역 컨테이너 스타일 */
+    #game-container {
+      position: relative; /* 자식 요소의 절대 위치 기준 설정 */
+      width: 90vw; /* 뷰포트 너비의 90% */
+      max-width: 800px; /* 최대 너비 800px */
+      height: 60vh; /* 뷰포트 높이의 60% */
+      max-height: 600px; /* 최대 높이 600px */
+      margin: 20px auto; /* 수직 여백과 수평 중앙 정렬 */
+      background-color: #2e2e40; /* 컨테이너 배경색 */
+      border: 2px solid #fff; /* 흰색 테두리 */
+      border-radius: 15px; /* 모서리를 둥글게 */
+      overflow: hidden; /* 내부 요소가 영역을 벗어나지 않도록 설정 */
+      transition: background-color 0.1s ease; /* 부드러운 배경색 전환 효과 */
+    }
+
+    /* 타겟(클릭 대상) 요소 스타일 */
+    #target {
+      position: absolute; /* 위치를 자유롭게 조정 가능 */
+      width: 80px; /* 너비 설정 */
+      height: 80px; /* 높이 설정 */
+      background-color: #ffc107; /* 배경색은 노란색 계열 */
+      border-radius: 50%; /* 완전한 원형으로 변경 */
+      cursor: pointer; /* 마우스 커서를 손가락 모양으로 변경 */
+      display: none; /* 처음에는 보이지 않도록 설정 */
+      transition: all 0.1s ease; /* 부드러운 전환 효과 */
+    }
+
+    /* 게임 정보 표시 영역 (예: 점수, 타이머 등) */
+    #info {
+      margin-top: 10px; /* 위쪽 여백 */
+      display: flex;
+      gap: 20px; /* 항목 사이 간격 */
+      font-size: 18px;
+    }
+
+    /* 버튼 스타일 설정 */
+    #start-btn {
+      padding: 12px 25px; /* 내부 여백 설정 */
+      font-size: 18px; /* 글자 크기 설정 */
+      cursor: pointer; /* 커서를 손가락 모양으로 변경 */
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50; /* 초록색 배경 */
+      color: white;
+      transition: background-color 0.3s;
+      margin-top: 15px;
+    }
+
+    #start-btn:disabled {
+        background-color: #555; /* 비활성화 시 색상 */
+        cursor: not-allowed;
+    }
+
+    #start-btn:hover:not(:disabled) {
+        background-color: #45a049; /* 호버 시 색상 변경 */
+    }
+
+    /* 게임 종료 팝업 모달 스타일 */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: none; /* 초기에는 숨김 */
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background-color: #3e3e52;
+        padding: 40px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .modal-content h2 {
+        margin-top: 0;
+        color: #fff;
+    }
+
+    .modal-content p {
+        font-size: 24px;
+        color: #ffc107;
+        margin: 20px 0;
+    }
+
+    .modal-content button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        background-color: #4CAF50;
+        color: white;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>🎯 에임 게임</h1>
+
+  <div id="game-container">
+    <div id="target"></div>
+  </div>
+
+  <div id="info">
+    <p>점수: <span id="score">0</span></p>
+    <p>남은 시간: <span id="time">30</span>초</p>
+  </div>
+
+  <button id="start-btn">게임 시작</button>
+
+  <!-- 게임 종료 시 나타날 모달 -->
+  <div id="end-game-modal" class="modal-overlay">
+      <div class="modal-content">
+          <h2>게임 종료!</h2>
+          <p>최종 점수: <span id="final-score">0</span></p>
+          <button id="restart-btn">다시 시작</button>
+      </div>
+  </div>
+
+
+  <script>
+    // HTML 요소 가져오기
+    const target = document.getElementById("target");
+    const scoreDisplay = document.getElementById("score");
+    const timeDisplay = document.getElementById("time");
+    const startBtn = document.getElementById("start-btn");
+    const gameContainer = document.getElementById("game-container");
+    const endGameModal = document.getElementById("end-game-modal");
+    const finalScoreDisplay = document.getElementById("final-score");
+    const restartBtn = document.getElementById("restart-btn");
+
+    // 게임 상태 변수
+    let score = 0;
+    let timeLeft = 30;
+    let countdownInterval;
+    let disappearTimer; // 타겟이 사라지는 것을 제어하는 타이머
+    let isGameRunning = false;
+
+    // 타겟이 랜덤 위치에 나타나도록 컨테이너의 크기를 가져와 좌표 계산
+    function getRandomPosition() {
+      const containerWidth = gameContainer.clientWidth;
+      const containerHeight = gameContainer.clientHeight;
+      const targetSize = target.offsetWidth;
+
+      const x = Math.random() * (containerWidth - targetSize);
+      const y = Math.random() * (containerHeight - targetSize);
+
+      return { x, y };
+    }
+
+    // 타겟을 생성하고 나타나게 하는 함수
+    function spawnTarget() {
+        if (!isGameRunning) return; // 게임이 종료되면 함수 중단
+
+        const pos = getRandomPosition();
+        target.style.left = `${pos.x}px`;
+        target.style.top = `${pos.y}px`;
+        target.style.display = "block";
+
+        // 일정 시간 후 타겟이 저절로 사라지게 하는 타이머 설정
+        disappearTimer = setTimeout(() => {
+            target.style.display = 'none';
+            if (isGameRunning) {
+                spawnTarget(); // 다음 타겟 생성
+            }
+        }, 1200); // 1.2초 후에 사라짐
+    }
+
+    // 게임 시작 함수
+    function startGame() {
+      isGameRunning = true;
+      startBtn.disabled = true;
+      endGameModal.style.display = "none";
+      score = 0;
+      timeLeft = 30;
+      scoreDisplay.textContent = score;
+      timeDisplay.textContent = timeLeft;
+
+      spawnTarget(); // 첫 타겟 생성
+
+      countdownInterval = setInterval(() => {
+        timeLeft--;
+        timeDisplay.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    // 게임 종료 함수
+    function endGame() {
+      isGameRunning = false;
+      clearTimeout(disappearTimer); // 진행 중인 타겟 생성 타이머 중지
+      clearInterval(countdownInterval);
+      target.style.display = "none";
+      
+      finalScoreDisplay.textContent = score;
+      endGameModal.style.display = "flex";
+      startBtn.disabled = false;
+    }
+
+    // 타겟 클릭 이벤트 핸들러
+    target.addEventListener("click", (event) => {
+        if(!isGameRunning) return;
+        event.stopPropagation();
+      
+        score++;
+        scoreDisplay.textContent = score;
+
+        // 기존의 사라지는 타이머를 취소하고 타겟을 즉시 숨김
+        clearTimeout(disappearTimer);
+        target.style.display = 'none';
+
+        // 잠시 후 다음 타겟을 생성하여 게임의 흐름을 만듦
+        setTimeout(spawnTarget, 150);
+    });
+    
+    // 게임 영역 클릭 이벤트 핸들러 (감점 로직)
+    gameContainer.addEventListener("click", () => {
+        if (isGameRunning) {
+            score--;
+            scoreDisplay.textContent = score;
+
+            gameContainer.style.backgroundColor = '#d32f2f';
+            setTimeout(() => {
+                gameContainer.style.backgroundColor = '#2e2e40';
+            }, 100);
+        }
+    });
+
+    // 시작 버튼 클릭 시 게임 시작
+    startBtn.addEventListener("click", startGame);
+
+    // 다시 시작 버튼 클릭 시 게임 재시작
+    restartBtn.addEventListener("click", () => {
+        endGameModal.style.display = "none";
+        startGame();
+    });
+  </script>
+</body>
+</html>
